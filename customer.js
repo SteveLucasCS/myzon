@@ -39,15 +39,16 @@ var displayAllProducts = new Promise(function(resolve, reject) {
 //     * Has a method removeFromCart() 
 //       * Removes an object from cart
 function Cart() {
-  this.products = ['test'];
+  this.products = [];
   this.totalPrice = 0;
-  this.removeFromCart = function(name) {
+  this.removeFromCart = function(id) {
+    id = parseInt(id);
     var itemsRemoved = 0;
     for (var i = 0; i < this.products.length; i++) {
-      if (this.products[i].productName === name) {
+      if (this.products[i].item_id == id) {
         try {
           // removes object at current index of the array
-          this.products.slice(i);
+          this.products = this.products.slice(i);
         } catch (e) {
           console.log(`Could not remove ${name} - error: ${e.message}`);
           return itemsRemoved;
@@ -55,10 +56,10 @@ function Cart() {
         itemsRemoved++;
       }
     }
-    if (itemsRemoved === 0) {
-      console.log('No items in your cart matching that name.');
-    }
-    return itemsRemoved;
+    if (itemsRemoved === 0) {console.log('No items in your cart matching that name.')}
+
+    console.log(`${itemsRemoved} items removed from your cart.`);
+    mainMenu();
   }
 
   this.addToCart = function(id) {
@@ -79,50 +80,55 @@ function Cart() {
     getItemById.then(function(item) {
       cart.products.push(item);
       cart.totalPrice += item.sale_price;
-      console.log(`${item.product_name} added to cart!`);
-      console.log(`New Cart Total: $${cart.totalPrice}`);
+      console.log(`\n+++++++++++++++++++++++++++++++++++++++++++++++++`);
+      console.log(` ${item.product_name} added to cart!`);
+      console.log(` New Cart Total: $${cart.totalPrice}`);
+      // mainMenu();
+      mainMenu();
     });
-  }
-}
+  } // end addToCart
+
+  this.checkout = function() {
+    console.log('\nCheckout\n');
+    var cart = this;
+    for (var i = 0; i < cart.products.length; i++) {
+      var product = cart.products[i];
+      var sold = product.quantity_sold + 1;
+      var stock = product.stock_quantity - 1;
+      var id = product.item_id;
+      var updateTable = new Promise(function(resolve, reject) {
+          // connection.query(`SELECT * FROM products WHERE item_id = ${item.item_id}`,
+          // function(err, res) {
+          //   console.log(res);
+          // });
+          connection.query(
+            `UPDATE products SET quantity_sold = ${sold}, stock_quantity = ${stock} WHERE item_id = ${id}`,
+            function(err, res) {
+              if (err) throw (err);
+            }
+          );
+          resolve(1);
+        } // end for loop through products
+      ); // end updateTable()
+    }
+    updateTable.then(function(resolved) {
+      console.log(`Amount Paid: $${cart.totalPrice}`);
+      console.log('Thank you for shopping at Myzon!');
+      connection.end();
+    });
+  } // end checkout()
+} // end cart constructor
+
+
 
 function displayItem(product) {
   console.log(`-------------------------------------------------`);
-  console.log(`ID: ${product.item_id}`);
-  console.log(`Name: ${product.product_name}`);
-  console.log(`Department: ${product.department_name}`);
-  console.log(`Price: ${product.sale_price}`);
+  console.log(` ID: ${product.item_id}`);
+  console.log(` Name: ${product.product_name}`);
+  console.log(` Department: ${product.department_name}`);
+  console.log(` Price: ${product.sale_price}`);
 }
 
-//   2. mainMenu()
-//     * Displays a list of products and takes user input to call other functions
-//     * Calls buyItemPrompt()
-//     * Calls checkout()
-function mainMenu() {
-
-  displayAllProducts.then(function(seperator) {
-    console.log(seperator);
-    INQUIRER.prompt([{
-      name: 'next',
-      type: 'list',
-      message: 'What Next?',
-      choices: ['Buy an Item', 'Checkout', 'Exit']
-    }]).then(function(input) {
-      switch (input.next) {
-        case 'Buy an Item':
-          buyItempPrompt();
-          break;
-        case 'Checkout':
-          cart.checkout();
-          break;
-        case 'Exit':
-          console.log('Thank you for shopping at Myzon!');
-          connection.end();
-          break;
-      }
-    });
-  });
-
-}
 //   4. buyItemPrompt()
 //     * Prompts the user to enter the ID of an item they want to buy
 //     * Calls addToCart()
@@ -133,7 +139,7 @@ function buyItemPrompt() {
     message: 'Enter a product ID number: '
   }]).then(function(input) {
     var numRegex = /^[0-9]*$/;
-    if (numRegex.test(input.id)) {
+    if (numRegex.test(input.id) && (input.id >= 0)) {
       cart.addToCart(input.id)
     } else {
       console.log('Not a valid ID.');
@@ -142,64 +148,76 @@ function buyItemPrompt() {
   }); // end inquirer
 }
 
+// removeItemPrompt()
+// Prompts the user ot enter the ID of an item in their cart to remove it
+function removeItemPrompt() {
+  console.log('\nShopping Cart\n');
+  for (var i = 0; i < cart.products.length; i++) {
+    displayItem(cart.products[i]);
+  }
+  console.log('-------------------------------------------------\n');
 
-//   5. addToCart()
-//     * Gets an item object from the database and passes it to cart.addItem()
-//     * Prompts user to checkout or return to main menu
-//     * Calls cart.addItem()
+  INQUIRER.prompt([{
+    name: 'id',
+    type: 'input',
+    message: 'Enter ID of product to be removed: ',
+  }]).then(function(input) {
+    var numRegex = /^[0-9]*$/;
+    if (numRegex.test(input.id) && (input.id >= 0)) {
+      cart.removeFromCart(input.id);
+    } else {
+      console.log('Not a valid ID');
+      removeItemPrompt();
+    }
+  });
+}
+
+//   2. mainMenu()
+//     * Displays a list of products and takes user input to call other functions
+//     * Calls buyItemPrompt()
 //     * Calls checkout()
-//     * Calls mainMenu()
+function mainMenu() {
+  displayAllProducts.then(function(seperator) {
+    console.log(seperator);
+    INQUIRER.prompt([{
+      name: 'next',
+      type: 'list',
+      message: 'What Next?',
+      choices: ['Buy an Item', 'Checkout','Remove an Item from Cart', 'Exit']
+    }]).then(function(input) {
 
-//   6. checkout()
-//     * Iterates through items in the users cart
-//       * Adds the price of each item to a sum total
-//       * Deducts the amount of an item purchased from the item's stock_quantity in the database
-//       * Adds the amount of an item purchased from the item's quantity_sold
+      switch (input.next) {
+        case 'Buy an Item':
+          buyItemPrompt();
+          break;
 
+        case 'Checkout':
+          if (cart.products <= 0) {
+            console.log('You have no items in your shopping cart.');
+            mainMenu();
+          } else {
+            cart.checkout()
+          }
+          break;
 
-// #### Main Menu
-//   1. Display a list of all products
-//     * Name - Category - Price
+        case 'Remove an Item from Cart':
+          if (cart.products <= 0) {
+            console.log('You have no items in your shopping cart.');
+            mainMenu();
+          } else {removeItemPrompt()}
+          break;
 
-//   2. Prompt User asking them what they'd like to to next:
-//     * Inquirer - List
-//       * Buy Item - calls buyItemPrompt()
-//       * Checkout - buys all products in the user's cart
-//       * Exit
+        default:
+          console.log('Thank you for shopping at Myzon!');
+          connection.end();
+          break;
+      }
+    });
+  });
+}
 
-// #### buyItemPrompt() function
-//   1. Ask user to enter the name of the product they want to buy
-//     * Inquirer - Text
-
-//   2. Display all results matching their search
-//     * SELECT * FROM products WHERE name ?
-
-//   3. Ask user to enter the id of the product they want to buy
-//     * Inquirer - Text (require 0-9)
-
-//   4. Adds the item to the user's cart
-//     * Calls addToCart();
-
-// #### addToCart() function
-//   1. Access the products table with a query
-//     * connect.query()
-
-//   2. Select product with the id matching what the user input
-//     * If the user input is invalid
-//       * Alert the user and prompt them for a new input
-//       * Call buyItemPrompt();
-
-//     * Else,
-//       * Update the stock_quantity of the product to stock_quantity - 1
-//       * Add the price of the product to the user's cart
-
-// #### checkout() function
-//   * Accesses products database
-//     * Iterates through items in the user's cart
-//       * Deducts the amount of an item purchased from the item's stock_quantity in the database
-//       * Adds the amount of an item purhased to the item's quantity_sold
-
-//   * Alerts the user that their purhase was succeessful, exits the program.
 cart = new Cart();
 
 mainMenu();
+
+console.log('***** TODO: fix removeFromCart *******');
