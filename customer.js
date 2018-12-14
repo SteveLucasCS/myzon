@@ -44,26 +44,28 @@ function Cart() {
   this.removeFromCart = function(id) {
     id = parseInt(id);
     var itemsRemoved = 0;
+    var newArr = [];
+    this.totalPrice = 0;
     for (var i = 0; i < this.products.length; i++) {
+      console.log(this);
       if (this.products[i].item_id == id) {
-        try {
-          // removes object at current index of the array
-          this.products = this.products.slice(i);
-        } catch (e) {
-          console.log(`Could not remove ${name} - error: ${e.message}`);
-          return itemsRemoved;
-        }
         itemsRemoved++;
+      } else {
+        newArr.push(this.products[i]);
+        this.totalPrice += this.products[i].sale_price;
       }
     }
-    if (itemsRemoved === 0) {console.log('No items in your cart matching that name.')}
+    this.products = newArr;
+    if (itemsRemoved === 0) {
+      console.log('No items in your cart matching that name.')
+    }
 
     console.log(`${itemsRemoved} items removed from your cart.`);
     mainMenu();
   }
 
   this.addToCart = function(id) {
-    cart = this;
+    var cart = this;
     var getItemById = new Promise(function(resolve, reject) {
       var item;
       connection.query(`SELECT * FROM products WHERE item_id = ${id};`,
@@ -89,7 +91,6 @@ function Cart() {
   } // end addToCart
 
   this.checkout = function() {
-    console.log('\nCheckout\n');
     var cart = this;
     for (var i = 0; i < cart.products.length; i++) {
       var product = cart.products[i];
@@ -112,7 +113,7 @@ function Cart() {
       ); // end updateTable()
     }
     updateTable.then(function(resolved) {
-      console.log(`Amount Paid: $${cart.totalPrice}`);
+      console.log(`\nAmount Paid: $${cart.totalPrice}`);
       console.log('Thank you for shopping at Myzon!');
       connection.end();
     });
@@ -126,7 +127,7 @@ function displayItem(product) {
   console.log(` ID: ${product.item_id}`);
   console.log(` Name: ${product.product_name}`);
   console.log(` Department: ${product.department_name}`);
-  console.log(` Price: ${product.sale_price}`);
+  console.log(` Price: $${product.sale_price}`);
 }
 
 //   4. buyItemPrompt()
@@ -183,7 +184,12 @@ function mainMenu() {
       name: 'next',
       type: 'list',
       message: 'What Next?',
-      choices: ['Buy an Item', 'Checkout','Remove an Item from Cart', 'Exit']
+      choices: [
+        'Buy an Item',
+        `Checkout (Cart Value -- $${cart.totalPrice})`,
+        'Remove an Item from Cart',
+        'Exit'
+      ]
     }]).then(function(input) {
 
       switch (input.next) {
@@ -192,24 +198,24 @@ function mainMenu() {
           break;
 
         case 'Checkout':
-          if (cart.products <= 0) {
-            console.log('You have no items in your shopping cart.');
-            mainMenu();
-          } else {
-            cart.checkout()
-          }
+          console.log('Thank you for shopping at Myzon!');
+          connection.end();
           break;
 
         case 'Remove an Item from Cart':
           if (cart.products <= 0) {
             console.log('You have no items in your shopping cart.');
             mainMenu();
-          } else {removeItemPrompt()}
+          } else {
+            removeItemPrompt();
+          }
           break;
 
         default:
-          console.log('Thank you for shopping at Myzon!');
-          connection.end();
+          if (cart.products <= 0) {
+            console.log('You have no items in your shopping cart.');
+            mainMenu();
+          } else {cart.checkout();}
           break;
       }
     });
@@ -219,5 +225,3 @@ function mainMenu() {
 cart = new Cart();
 
 mainMenu();
-
-console.log('***** TODO: fix removeFromCart *******');
