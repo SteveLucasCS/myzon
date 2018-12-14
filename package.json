@@ -1,0 +1,24 @@
+{
+  "name": "myzon",
+  "version": "1.0.0",
+  "description": "Homework assignment 10 - A CLI based 'storefront'",
+  "main": "customer.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SteveLucasCS/myzon.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SteveLucasCS/myzon/issues"
+  },
+  "homepage": "https://github.com/SteveLucasCS/myzon#readme",
+  "dependencies": {
+    "inquirer": "^6.2.1",
+    "mysql": "^2.16.0"
+  }
+}
