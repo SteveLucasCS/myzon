@@ -47,7 +47,6 @@ function Cart() {
     var newArr = [];
     this.totalPrice = 0;
     for (var i = 0; i < this.products.length; i++) {
-      console.log(this);
       if (this.products[i].item_id == id) {
         itemsRemoved++;
       } else {
@@ -72,6 +71,9 @@ function Cart() {
         function(err, res) {
           if (err || !res[0]) {
             console.log(`No products matching that ID.`);
+            buyItemPrompt();
+          } else if (res[0].stock_quantity == 0) {
+            console.log('Sorry, that item is out of stock.');
             buyItemPrompt();
           } else {
             item = res[0];
@@ -139,9 +141,9 @@ function buyItemPrompt() {
     type: 'input',
     message: 'Enter a product ID number: '
   }]).then(function(input) {
-    var numRegex = /^[0-9]*$/;
-    if (numRegex.test(input.id) && (input.id >= 0)) {
-      cart.addToCart(input.id)
+    var id = parseInt(input.id);
+    if (id && id >= 0) {
+      cart.addToCart(id)
     } else {
       console.log('Not a valid ID.');
       buyItemPrompt();
@@ -163,9 +165,9 @@ function removeItemPrompt() {
     type: 'input',
     message: 'Enter ID of product to be removed: ',
   }]).then(function(input) {
-    var numRegex = /^[0-9]*$/;
-    if (numRegex.test(input.id) && (input.id >= 0)) {
-      cart.removeFromCart(input.id);
+    var id = parseInt(input.id);
+    if (id && id >= 0) {
+      cart.removeFromCart(id);
     } else {
       console.log('Not a valid ID');
       removeItemPrompt();
@@ -183,7 +185,7 @@ function mainMenu() {
     INQUIRER.prompt([{
       name: 'next',
       type: 'list',
-      message: 'What Next?',
+      message: 'Welcome',
       choices: [
         'Buy an Item',
         `Checkout (Cart Value -- $${cart.totalPrice})`,
@@ -209,6 +211,11 @@ function mainMenu() {
           } else {
             removeItemPrompt();
           }
+          break;
+
+        case 'Exit':
+          console.log('Thank you for shopping at Myzon!');
+          connection.end();
           break;
 
         default:
